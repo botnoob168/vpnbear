@@ -1,0 +1,1435 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบลงทะเบียนหมาแมว - ตลาด</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha512-r22gChDnGvBylk90+2e/ycr3RVrDi8DIOkIGNhJlKfuyQM4tIRAI062MaV8sfjQKYVGjOBaZBOA87z+IhZE9DA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap');
+        body { font-family: 'Sarabun', sans-serif; }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            position: relative;
+        }
+        
+        .gradient-bg::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+            animation: backgroundMove 40s linear infinite;
+        }
+        
+        @keyframes backgroundMove {
+            0% { transform: translateX(0) translateY(0); }
+            100% { transform: translateX(-30px) translateY(-30px); }
+        }
+        
+        .card-hover {
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        
+        .card-hover:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 25px 50px rgba(0,0,0,0.15);
+        }
+        
+        .floating-animation {
+            animation: float 8s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            25% { transform: translateY(-15px) rotate(5deg); }
+            50% { transform: translateY(-10px) rotate(0deg); }
+            75% { transform: translateY(-20px) rotate(-5deg); }
+        }
+        
+        .pulse-animation {
+            animation: pulse 2s infinite;
+        }
+        
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+        
+        .pet-card {
+            background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .pet-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            transition: left 0.5s;
+        }
+        
+        .pet-card:hover::before {
+            left: 100%;
+        }
+        
+        .input-focus {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .input-focus:focus {
+            transform: scale(1.02);
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1), 0 10px 25px rgba(0,0,0,0.1);
+        }
+        
+        .sparkle {
+            animation: sparkle 4s ease-in-out infinite;
+        }
+        
+        @keyframes sparkle {
+            0%, 100% { opacity: 0.8; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(1.05); }
+        }
+        
+        .rainbow-text {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .export-btn {
+            background: linear-gradient(45deg, #00c851, #007e33);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .export-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.3s;
+        }
+        
+        .export-btn:hover::before {
+            left: 100%;
+        }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen">
+    <!-- Decorative Elements -->
+    <div class="fixed top-10 left-10 text-6xl opacity-20 floating-animation">🐕</div>
+    <div class="fixed top-32 right-20 text-4xl opacity-20 floating-animation" style="animation-delay: -2s;">🐱</div>
+    <div class="fixed bottom-20 left-20 text-5xl opacity-20 floating-animation" style="animation-delay: -4s;">🦴</div>
+    <div class="fixed bottom-32 right-10 text-3xl opacity-20 floating-animation" style="animation-delay: -1s;">🐾</div>
+
+    <div class="container mx-auto px-4 py-8 relative z-10">
+        <!-- Header -->
+        <div class="text-center mb-12">
+            <div class="inline-block glass-effect rounded-3xl px-8 py-6 mb-6">
+                <h1 class="text-6xl font-extrabold text-white mb-3 drop-shadow-2xl rainbow-text">
+                    🐕🐱 ระบบลงทะเบียนหมาแมว
+                </h1>
+                <p class="text-white/90 text-xl font-semibold drop-shadow-lg">สำหรับผู้ค้าในตลาด - ติดตามเจ้าของสัตว์เลี้ยง</p>
+                <div class="mt-4 flex justify-center space-x-4">
+                    <span class="sparkle text-2xl">✨</span>
+                    <span class="sparkle text-2xl" style="animation-delay: 0.5s;">⭐</span>
+                    <span class="sparkle text-2xl" style="animation-delay: 1s;">💫</span>
+                </div>
+            </div>
+            
+            <!-- Connection Status & Export Button -->
+            <div class="mb-6 space-y-4">
+                <div class="flex justify-center">
+                    <div id="connectionStatus" class="text-sm font-medium bg-yellow-50 px-3 py-1 rounded-full border border-yellow-200">
+                        <span class="text-yellow-600">🟡 ตรวจสอบการเชื่อมต่อ...</span>
+                    </div>
+                </div>
+                
+                <div id="syncStatus" class="text-center" style="display: none;"></div>
+                
+                <div class="flex justify-center space-x-4 flex-wrap gap-4">
+                    <button id="exportBtn" class="export-btn text-white px-8 py-4 rounded-2xl font-bold text-lg shadow-2xl hover:shadow-3xl transform hover:scale-105 transition-all duration-300">
+                        <span class="flex items-center justify-center">
+                            <span class="mr-3 text-2xl">📊</span>
+                            ส่งออกข้อมูล Excel
+                        </span>
+                    </button>
+                    
+                    <button id="setupBtn" class="bg-gradient-to-r from-blue-500 to-purple-500 text-white px-8 py-4 rounded-2xl font-bold text-lg shadow-2xl hover:shadow-3xl transform hover:scale-105 transition-all duration-300">
+                        <span class="flex items-center justify-center">
+                            <span class="mr-3 text-2xl">⚙️</span>
+                            ตั้งค่า Google Sheets
+                        </span>
+                    </button>
+                    
+                    <button id="firebaseBtn" class="bg-gradient-to-r from-orange-500 to-red-500 text-white px-8 py-4 rounded-2xl font-bold text-lg shadow-2xl hover:shadow-3xl transform hover:scale-105 transition-all duration-300">
+                        <span class="flex items-center justify-center">
+                            <span class="mr-3 text-2xl">🔥</span>
+                            ตั้งค่า Firebase
+                        </span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid lg:grid-cols-2 gap-8">
+            <!-- Registration Form -->
+            <div class="bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl p-8 card-hover">
+                <div class="flex items-center justify-center mb-8">
+                    <div class="bg-gradient-to-r from-purple-500 to-pink-500 rounded-full p-4 mr-4">
+                        <span class="text-3xl">📝</span>
+                    </div>
+                    <h2 class="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                        ลงทะเบียนสัตว์เลี้ยงใหม่
+                    </h2>
+                </div>
+                
+                <form id="petForm" class="space-y-6">
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div class="relative">
+                            <label class="block text-sm font-semibold text-gray-700 mb-3">👤 ชื่อเจ้าของ *</label>
+                            <input type="text" id="ownerName" required 
+                                   class="w-full px-5 py-4 border-2 border-gray-200 rounded-2xl input-focus focus:border-purple-500 focus:ring-0 text-gray-800 font-medium">
+                        </div>
+                        <div class="relative">
+                            <label class="block text-sm font-semibold text-gray-700 mb-3">📱 เบอร์โทร *</label>
+                            <input type="tel" id="ownerPhone" required 
+                                   class="w-full px-5 py-4 border-2 border-gray-200 rounded-2xl input-focus focus:border-purple-500 focus:ring-0 text-gray-800 font-medium">
+                        </div>
+                    </div>
+
+                    <div class="relative">
+                        <label class="block text-sm font-semibold text-gray-700 mb-3">🏪 ร้านค้า/แผง</label>
+                        <input type="text" id="shopName" 
+                               class="w-full px-5 py-4 border-2 border-gray-200 rounded-2xl input-focus focus:border-purple-500 focus:ring-0 text-gray-800 font-medium">
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div class="relative">
+                            <label class="block text-sm font-semibold text-gray-700 mb-3">🐾 ชื่อสัตว์เลี้ยง *</label>
+                            <input type="text" id="petName" required 
+                                   class="w-full px-5 py-4 border-2 border-gray-200 rounded-2xl input-focus focus:border-purple-500 focus:ring-0 text-gray-800 font-medium">
+                        </div>
+                        <div class="relative">
+                            <label class="block text-sm font-semibold text-gray-700 mb-3">🏷️ ประเภท *</label>
+                            <select id="petType" required 
+                                    class="w-full px-5 py-4 border-2 border-gray-200 rounded-2xl input-focus focus:border-purple-500 focus:ring-0 text-gray-800 font-medium">
+                                <option value="">เลือกประเภท</option>
+                                <option value="หมา">🐕 หมา</option>
+                                <option value="แมว">🐱 แมว</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div class="relative">
+                            <label class="block text-sm font-semibold text-gray-700 mb-3">🧬 สายพันธุ์</label>
+                            <input type="text" id="petBreed" 
+                                   class="w-full px-5 py-4 border-2 border-gray-200 rounded-2xl input-focus focus:border-purple-500 focus:ring-0 text-gray-800 font-medium">
+                        </div>
+                        <div class="relative">
+                            <label class="block text-sm font-semibold text-gray-700 mb-3">🎨 สี</label>
+                            <input type="text" id="petColor" 
+                                   class="w-full px-5 py-4 border-2 border-gray-200 rounded-2xl input-focus focus:border-purple-500 focus:ring-0 text-gray-800 font-medium">
+                        </div>
+                    </div>
+
+                    <!-- Vaccination Section -->
+                    <div class="bg-gradient-to-r from-green-50 to-blue-50 rounded-2xl p-6 border-2 border-green-200">
+                        <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
+                            <span class="text-2xl mr-2">💉</span>
+                            ข้อมูลการฉีดวัคซีน
+                        </h3>
+                        
+                        <div class="grid md:grid-cols-2 gap-6">
+                            <div class="relative">
+                                <label class="block text-sm font-semibold text-gray-700 mb-3">🦠 วัคซีนพิษสุนัขบ้า</label>
+                                <select id="rabiesVaccine" 
+                                        class="w-full px-5 py-4 border-2 border-gray-200 rounded-2xl input-focus focus:border-green-500 focus:ring-0 text-gray-800 font-medium">
+                                    <option value="">เลือกสถานะ</option>
+                                    <option value="ฉีดแล้ว">✅ ฉีดแล้ว</option>
+                                    <option value="ยังไม่ฉีด">❌ ยังไม่ฉีด</option>
+                                    <option value="ไม่ทราบ">❓ ไม่ทราบ</option>
+                                </select>
+                            </div>
+                            <div class="relative">
+                                <label class="block text-sm font-semibold text-gray-700 mb-3">📅 วันที่ฉีดล่าสุด</label>
+                                <input type="date" id="vaccineDate" 
+                                       class="w-full px-5 py-4 border-2 border-gray-200 rounded-2xl input-focus focus:border-green-500 focus:ring-0 text-gray-800 font-medium">
+                            </div>
+                        </div>
+                        
+                        <div class="grid md:grid-cols-2 gap-6 mt-4">
+                            <div class="relative">
+                                <label class="block text-sm font-semibold text-gray-700 mb-3">🏥 สถานที่ฉีด</label>
+                                <input type="text" id="vaccineLocation" 
+                                       placeholder="เช่น โรงพยาบาลสัตว์, คลินิก"
+                                       class="w-full px-5 py-4 border-2 border-gray-200 rounded-2xl input-focus focus:border-green-500 focus:ring-0 text-gray-800 font-medium">
+                            </div>
+                            <div class="relative">
+                                <label class="block text-sm font-semibold text-gray-700 mb-3">💊 วัคซีนอื่นๆ</label>
+                                <input type="text" id="otherVaccines" 
+                                       placeholder="เช่น 5 in 1, 7 in 1"
+                                       class="w-full px-5 py-4 border-2 border-gray-200 rounded-2xl input-focus focus:border-green-500 focus:ring-0 text-gray-800 font-medium">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="relative">
+                        <label class="block text-sm font-semibold text-gray-700 mb-3">✨ ลักษณะพิเศษ</label>
+                        <textarea id="petDescription" rows="4" 
+                                  class="w-full px-5 py-4 border-2 border-gray-200 rounded-2xl input-focus focus:border-purple-500 focus:ring-0 text-gray-800 font-medium resize-none"
+                                  placeholder="เช่น มีจุดดำที่หู, ขาหลังขาว, มีรอยแผลเป็น ฯลฯ"></textarea>
+                    </div>
+
+                    <button type="submit" 
+                            class="w-full bg-gradient-to-r from-purple-600 via-pink-600 to-red-500 text-white py-4 px-8 rounded-2xl font-bold text-lg hover:from-purple-700 hover:via-pink-700 hover:to-red-600 transform hover:scale-105 transition-all duration-300 shadow-xl hover:shadow-2xl">
+                        <span class="flex items-center justify-center">
+                            <span class="mr-2">✅</span>
+                            ลงทะเบียนเลย!
+                        </span>
+                    </button>
+                </form>
+            </div>
+
+            <!-- Pet List -->
+            <div class="bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl p-8 card-hover">
+                <div class="flex justify-between items-center mb-8">
+                    <div class="flex items-center">
+                        <div class="bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full p-4 mr-4">
+                            <span class="text-3xl">📋</span>
+                        </div>
+                        <h2 class="text-3xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
+                            รายชื่อสัตว์เลี้ยง
+                        </h2>
+                    </div>
+                    <div class="bg-gradient-to-r from-green-400 to-blue-500 text-white px-6 py-3 rounded-2xl shadow-lg">
+                        <div class="text-sm font-medium">ทั้งหมด</div>
+                        <div class="text-2xl font-bold text-center" id="totalCount">0</div>
+                        <div class="text-sm font-medium">ตัว</div>
+                    </div>
+                </div>
+
+                <!-- Search -->
+                <div class="mb-6 relative">
+                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <span class="text-2xl">🔍</span>
+                    </div>
+                    <input type="text" id="searchInput" placeholder="ค้นหาชื่อเจ้าของ, ชื่อสัตว์, หรือร้านค้า..." 
+                           class="w-full pl-16 pr-5 py-4 border-2 border-gray-200 rounded-2xl input-focus focus:border-blue-500 focus:ring-0 text-gray-800 font-medium">
+                </div>
+
+                <!-- Filter -->
+                <div class="mb-6">
+                    <select id="typeFilter" class="px-5 py-3 border-2 border-gray-200 rounded-2xl input-focus focus:border-blue-500 focus:ring-0 text-gray-800 font-medium">
+                        <option value="">🌟 ทุกประเภท</option>
+                        <option value="หมา">🐕 หมาเท่านั้น</option>
+                        <option value="แมว">🐱 แมวเท่านั้น</option>
+                    </select>
+                </div>
+
+                <!-- Pet List -->
+                <div id="petList" class="space-y-4 max-h-96 overflow-y-auto pr-2">
+                    <div class="text-center text-gray-500 py-12">
+                        <div class="text-6xl mb-4 opacity-50">🐾</div>
+                        <div class="text-lg font-medium">ยังไม่มีข้อมูลสัตว์เลี้ยง</div>
+                        <div class="text-sm">กรุณาลงทะเบียนสัตว์เลี้ยงตัวแรก</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Google Sheets Configuration
+        const GOOGLE_SHEETS_CONFIG = {
+            scriptUrl: '', // จะใส่ URL ของ Google Apps Script ที่นี่
+            sheetId: '',   // จะใส่ ID ของ Google Sheets ที่นี่
+            enabled: false // เปลี่ยนเป็น true เมื่อตั้งค่าเสร็จ
+        };
+
+        // Firebase Configuration
+        const FIREBASE_CONFIG = {
+            apiKey: "",
+            authDomain: "",
+            projectId: "",
+            storageBucket: "",
+            messagingSenderId: "",
+            appId: "",
+            enabled: false
+        };
+
+        let firebaseApp = null;
+        let firestore = null;
+
+        let pets = JSON.parse(localStorage.getItem('marketPets')) || [];
+        let petIdCounter = parseInt(localStorage.getItem('petIdCounter')) || 1;
+        let isOnline = navigator.onLine;
+        let syncQueue = JSON.parse(localStorage.getItem('syncQueue')) || [];
+
+        // ตรวจสอบสถานะอินเทอร์เน็ต
+        window.addEventListener('online', () => {
+            isOnline = true;
+            updateConnectionStatus();
+            syncWithGoogleSheets();
+        });
+
+        window.addEventListener('offline', () => {
+            isOnline = false;
+            updateConnectionStatus();
+        });
+
+        // Firebase Functions
+        function initializeFirebase() {
+            if (!FIREBASE_CONFIG.enabled) return false;
+            
+            try {
+                firebaseApp = firebase.initializeApp(FIREBASE_CONFIG);
+                firestore = firebase.firestore();
+                console.log('Firebase initialized successfully');
+                return true;
+            } catch (error) {
+                console.error('Firebase initialization error:', error);
+                return false;
+            }
+        }
+
+        async function saveToFirebase(petData) {
+            if (!firestore) return false;
+            
+            try {
+                await firestore.collection('pets').doc(petData.id).set({
+                    ...petData,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                return true;
+            } catch (error) {
+                console.error('Firebase save error:', error);
+                return false;
+            }
+        }
+
+        async function loadFromFirebase() {
+            if (!firestore) return [];
+            
+            try {
+                const snapshot = await firestore.collection('pets').orderBy('createdAt', 'desc').get();
+                const firebasePets = [];
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    firebasePets.push({
+                        ...data,
+                        id: doc.id
+                    });
+                });
+                return firebasePets;
+            } catch (error) {
+                console.error('Firebase load error:', error);
+                return [];
+            }
+        }
+
+        async function deleteFromFirebase(petId) {
+            if (!firestore) return false;
+            
+            try {
+                await firestore.collection('pets').doc(petId).delete();
+                return true;
+            } catch (error) {
+                console.error('Firebase delete error:', error);
+                return false;
+            }
+        }
+
+        function updateConnectionStatus() {
+            const statusElement = document.getElementById('connectionStatus');
+            
+            if (isOnline && FIREBASE_CONFIG.enabled) {
+                statusElement.innerHTML = '<span class="text-green-600">🟢 เชื่อมต่อ Firebase</span>';
+                statusElement.className = 'text-sm font-medium bg-green-50 px-3 py-1 rounded-full border border-green-200';
+            } else if (isOnline && GOOGLE_SHEETS_CONFIG.enabled) {
+                statusElement.innerHTML = '<span class="text-green-600">🟢 เชื่อมต่อ Google Sheets</span>';
+                statusElement.className = 'text-sm font-medium bg-green-50 px-3 py-1 rounded-full border border-green-200';
+            } else if (isOnline && !GOOGLE_SHEETS_CONFIG.enabled && !FIREBASE_CONFIG.enabled) {
+                statusElement.innerHTML = '<span class="text-yellow-600">🟡 ออนไลน์ (ยังไม่ตั้งค่าฐานข้อมูล)</span>';
+                statusElement.className = 'text-sm font-medium bg-yellow-50 px-3 py-1 rounded-full border border-yellow-200';
+            } else {
+                statusElement.innerHTML = '<span class="text-red-600">🔴 ออฟไลน์ (ข้อมูลเก็บในเครื่อง)</span>';
+                statusElement.className = 'text-sm font-medium bg-red-50 px-3 py-1 rounded-full border border-red-200';
+            }
+        }
+
+        async function syncWithGoogleSheets() {
+            if (!GOOGLE_SHEETS_CONFIG.enabled || !isOnline || syncQueue.length === 0) return;
+
+            try {
+                showSyncStatus('กำลังซิงค์ข้อมูล...');
+                
+                for (const action of syncQueue) {
+                    await sendToGoogleSheets(action);
+                }
+                
+                // ล้าง sync queue เมื่อซิงค์สำเร็จ
+                syncQueue = [];
+                localStorage.setItem('syncQueue', JSON.stringify(syncQueue));
+                showSyncStatus('ซิงค์สำเร็จ!', 'success');
+                
+            } catch (error) {
+                console.error('Sync error:', error);
+                showSyncStatus('ซิงค์ล้มเหลว จะลองใหม่ภายหลัง', 'error');
+            }
+        }
+
+        async function sendToGoogleSheets(data) {
+            if (!GOOGLE_SHEETS_CONFIG.enabled || !GOOGLE_SHEETS_CONFIG.scriptUrl) {
+                throw new Error('Google Sheets ยังไม่ได้ตั้งค่า');
+            }
+
+            const response = await fetch(GOOGLE_SHEETS_CONFIG.scriptUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            return await response.json();
+        }
+
+        function addToSyncQueue(action) {
+            syncQueue.push({
+                ...action,
+                timestamp: new Date().toISOString()
+            });
+            localStorage.setItem('syncQueue', JSON.stringify(syncQueue));
+            
+            // พยายามซิงค์ทันที
+            if (isOnline && GOOGLE_SHEETS_CONFIG.enabled) {
+                syncWithGoogleSheets();
+            }
+        }
+
+        function showSyncStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('syncStatus');
+            statusDiv.textContent = message;
+            
+            statusDiv.className = 'text-sm font-medium px-3 py-2 rounded-lg transition-all duration-300 ';
+            
+            switch(type) {
+                case 'success':
+                    statusDiv.className += 'bg-green-100 text-green-700 border border-green-200';
+                    break;
+                case 'error':
+                    statusDiv.className += 'bg-red-100 text-red-700 border border-red-200';
+                    break;
+                default:
+                    statusDiv.className += 'bg-blue-100 text-blue-700 border border-blue-200';
+            }
+            
+            statusDiv.style.display = 'block';
+            
+            if (type === 'success' || type === 'error') {
+                setTimeout(() => {
+                    statusDiv.style.display = 'none';
+                }, 3000);
+            }
+        }
+
+        function savePets() {
+            localStorage.setItem('marketPets', JSON.stringify(pets));
+            localStorage.setItem('petIdCounter', petIdCounter.toString());
+        }
+
+        function generatePetId() {
+            const id = `PET${petIdCounter.toString().padStart(3, '0')}`;
+            petIdCounter++;
+            return id;
+        }
+
+        async function addPet(petData) {
+            const pet = {
+                id: generatePetId(),
+                ...petData,
+                registeredDate: new Date().toLocaleDateString('th-TH')
+            };
+            pets.unshift(pet);
+            savePets();
+            
+            // บันทึกลง Firebase ก่อน (ถ้าเปิดใช้งาน)
+            if (FIREBASE_CONFIG.enabled) {
+                try {
+                    await saveToFirebase(pet);
+                    showSyncStatus('บันทึกลง Firebase สำเร็จ!', 'success');
+                } catch (error) {
+                    console.error('Firebase save failed:', error);
+                    showSyncStatus('บันทึกลง Firebase ล้มเหลว', 'error');
+                }
+            }
+            
+            // เพิ่มลงใน Google Sheets sync queue (ถ้าเปิดใช้งาน)
+            if (GOOGLE_SHEETS_CONFIG.enabled) {
+                addToSyncQueue({
+                    action: 'add',
+                    data: pet
+                });
+            }
+            
+            renderPets();
+            updateTotalCount();
+        }
+
+        async function deletePet(petId) {
+            if (confirm('คุณแน่ใจหรือไม่ที่จะลบข้อมูลนี้?')) {
+                const petToDelete = pets.find(pet => pet.id === petId);
+                pets = pets.filter(pet => pet.id !== petId);
+                savePets();
+                
+                // ลบจาก Firebase ก่อน (ถ้าเปิดใช้งาน)
+                if (FIREBASE_CONFIG.enabled && petToDelete) {
+                    try {
+                        await deleteFromFirebase(petId);
+                        showSyncStatus('ลบจาก Firebase สำเร็จ!', 'success');
+                    } catch (error) {
+                        console.error('Firebase delete failed:', error);
+                        showSyncStatus('ลบจาก Firebase ล้มเหลว', 'error');
+                    }
+                }
+                
+                // เพิ่มลงใน Google Sheets sync queue (ถ้าเปิดใช้งาน)
+                if (GOOGLE_SHEETS_CONFIG.enabled && petToDelete) {
+                    addToSyncQueue({
+                        action: 'delete',
+                        data: { id: petId }
+                    });
+                }
+                
+                renderPets();
+                updateTotalCount();
+            }
+        }
+
+        function renderPets(petsToRender = pets) {
+            const petList = document.getElementById('petList');
+            
+            if (petsToRender.length === 0) {
+                petList.innerHTML = `
+                    <div class="text-center text-gray-500 py-12">
+                        <div class="text-6xl mb-4 opacity-50">🐾</div>
+                        <div class="text-lg font-medium">${pets.length === 0 ? 'ยังไม่มีข้อมูลสัตว์เลี้ยง' : 'ไม่พบข้อมูลที่ค้นหา'}</div>
+                        <div class="text-sm">${pets.length === 0 ? 'กรุณาลงทะเบียนสัตว์เลี้ยงตัวแรก' : 'ลองเปลี่ยนคำค้นหาหรือตัวกรอง'}</div>
+                    </div>
+                `;
+                return;
+            }
+
+            petList.innerHTML = petsToRender.map(pet => `
+                <div class="pet-card rounded-2xl p-6 card-hover border-l-4 ${pet.petType === 'หมา' ? 'border-l-blue-500' : 'border-l-pink-500'}">
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="flex items-center space-x-4">
+                            <div class="text-4xl ${pet.petType === 'หมา' ? 'bg-blue-100' : 'bg-pink-100'} rounded-full p-3">
+                                ${pet.petType === 'หมา' ? '🐕' : '🐱'}
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-xl text-gray-800 mb-1">${pet.petName}</h3>
+                                <div class="flex items-center space-x-2">
+                                    <span class="bg-gradient-to-r ${pet.petType === 'หมา' ? 'from-blue-500 to-blue-600' : 'from-pink-500 to-pink-600'} text-white px-3 py-1 rounded-full text-xs font-semibold">
+                                        ${pet.id}
+                                    </span>
+                                    <span class="text-xs text-gray-500">${pet.registeredDate}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <button onclick="deletePet('${pet.id}')" 
+                                class="bg-red-100 hover:bg-red-200 text-red-600 hover:text-red-700 px-3 py-2 rounded-xl text-sm font-medium transition-all duration-200 hover:scale-105">
+                            🗑️ ลบ
+                        </button>
+                    </div>
+                    
+                    <div class="bg-gray-50 rounded-xl p-4 mb-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                            <div class="flex items-center space-x-2">
+                                <span class="text-blue-500">👤</span>
+                                <span class="font-semibold text-gray-700">เจ้าของ:</span>
+                                <span class="text-gray-800">${pet.ownerName}</span>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <span class="text-green-500">📱</span>
+                                <span class="font-semibold text-gray-700">โทร:</span>
+                                <span class="text-gray-800">${pet.ownerPhone}</span>
+                            </div>
+                            ${pet.shopName ? `
+                                <div class="flex items-center space-x-2">
+                                    <span class="text-purple-500">🏪</span>
+                                    <span class="font-semibold text-gray-700">ร้าน:</span>
+                                    <span class="text-gray-800">${pet.shopName}</span>
+                                </div>
+                            ` : ''}
+                            ${pet.petBreed ? `
+                                <div class="flex items-center space-x-2">
+                                    <span class="text-orange-500">🧬</span>
+                                    <span class="font-semibold text-gray-700">สายพันธุ์:</span>
+                                    <span class="text-gray-800">${pet.petBreed}</span>
+                                </div>
+                            ` : ''}
+                            ${pet.petColor ? `
+                                <div class="flex items-center space-x-2">
+                                    <span class="text-pink-500">🎨</span>
+                                    <span class="font-semibold text-gray-700">สี:</span>
+                                    <span class="text-gray-800">${pet.petColor}</span>
+                                </div>
+                            ` : ''}
+                            ${pet.rabiesVaccine ? `
+                                <div class="flex items-center space-x-2">
+                                    <span class="text-red-500">💉</span>
+                                    <span class="font-semibold text-gray-700">วัคซีนพิษสุนัขบ้า:</span>
+                                    <span class="text-gray-800">${pet.rabiesVaccine}</span>
+                                </div>
+                            ` : ''}
+                            ${pet.vaccineDate ? `
+                                <div class="flex items-center space-x-2">
+                                    <span class="text-blue-500">📅</span>
+                                    <span class="font-semibold text-gray-700">วันที่ฉีดล่าสุด:</span>
+                                    <span class="text-gray-800">${new Date(pet.vaccineDate).toLocaleDateString('th-TH')}</span>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                    
+                    <!-- Vaccine Info Section -->
+                    ${(pet.vaccineLocation || pet.otherVaccines) ? `
+                        <div class="bg-green-50 border-l-4 border-green-400 p-3 rounded-r-xl mb-3">
+                            <div class="flex items-start space-x-2">
+                                <span class="text-green-500 mt-0.5">💉</span>
+                                <div class="w-full">
+                                    <span class="font-semibold text-gray-700 text-sm">ข้อมูลวัคซีนเพิ่มเติม:</span>
+                                    ${pet.vaccineLocation ? `<p class="text-gray-800 text-sm mt-1">🏥 สถานที่ฉีด: ${pet.vaccineLocation}</p>` : ''}
+                                    ${pet.otherVaccines ? `<p class="text-gray-800 text-sm mt-1">💊 วัคซีนอื่นๆ: ${pet.otherVaccines}</p>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    ${pet.petDescription ? `
+                        <div class="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded-r-xl">
+                            <div class="flex items-start space-x-2">
+                                <span class="text-yellow-500 mt-0.5">✨</span>
+                                <div>
+                                    <span class="font-semibold text-gray-700 text-sm">ลักษณะพิเศษ:</span>
+                                    <p class="text-gray-800 text-sm mt-1">${pet.petDescription}</p>
+                                </div>
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+            `).join('');
+        }
+
+        function updateTotalCount() {
+            const countElement = document.getElementById('totalCount');
+            countElement.textContent = pets.length;
+            countElement.classList.add('pulse-animation');
+            setTimeout(() => {
+                countElement.classList.remove('pulse-animation');
+            }, 1000);
+        }
+
+        function filterPets() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const typeFilter = document.getElementById('typeFilter').value;
+            
+            let filteredPets = pets.filter(pet => {
+                const matchesSearch = !searchTerm || 
+                    pet.ownerName.toLowerCase().includes(searchTerm) ||
+                    pet.petName.toLowerCase().includes(searchTerm) ||
+                    (pet.shopName && pet.shopName.toLowerCase().includes(searchTerm)) ||
+                    pet.id.toLowerCase().includes(searchTerm);
+                
+                const matchesType = !typeFilter || pet.petType === typeFilter;
+                
+                return matchesSearch && matchesType;
+            });
+            
+            renderPets(filteredPets);
+        }
+
+        function exportToExcel() {
+            if (pets.length === 0) {
+                alert('ไม่มีข้อมูลสำหรับส่งออก');
+                return;
+            }
+
+            try {
+                // Check if XLSX is loaded
+                if (typeof XLSX === 'undefined') {
+                    alert('กำลังโหลดไลบรารี Excel กรุณารอสักครู่แล้วลองใหม่');
+                    return;
+                }
+
+                // Prepare data for Excel
+                const excelData = pets.map((pet, index) => ({
+                    'ลำดับ': index + 1,
+                    'รหัสสัตว์เลี้ยง': pet.id,
+                    'ชื่อสัตว์เลี้ยง': pet.petName,
+                    'ประเภท': pet.petType,
+                    'สายพันธุ์': pet.petBreed || '-',
+                    'สี': pet.petColor || '-',
+                    'ชื่อเจ้าของ': pet.ownerName,
+                    'เบอร์โทร': pet.ownerPhone,
+                    'ร้านค้า/แผง': pet.shopName || '-',
+                    'วัคซีนพิษสุนัขบ้า': pet.rabiesVaccine || '-',
+                    'วันที่ฉีดวัคซีน': pet.vaccineDate ? new Date(pet.vaccineDate).toLocaleDateString('th-TH') : '-',
+                    'สถานที่ฉีดวัคซีน': pet.vaccineLocation || '-',
+                    'วัคซีนอื่นๆ': pet.otherVaccines || '-',
+                    'ลักษณะพิเศษ': pet.petDescription || '-',
+                    'วันที่ลงทะเบียน': pet.registeredDate
+                }));
+
+                // Create workbook and worksheet
+                const wb = XLSX.utils.book_new();
+                const ws = XLSX.utils.json_to_sheet(excelData);
+
+                // Set column widths
+                const colWidths = [
+                    { wch: 8 },   // ลำดับ
+                    { wch: 15 },  // รหัสสัตว์เลี้ยง
+                    { wch: 20 },  // ชื่อสัตว์เลี้ยง
+                    { wch: 10 },  // ประเภท
+                    { wch: 15 },  // สายพันธุ์
+                    { wch: 15 },  // สี
+                    { wch: 25 },  // ชื่อเจ้าของ
+                    { wch: 15 },  // เบอร์โทร
+                    { wch: 20 },  // ร้านค้า/แผง
+                    { wch: 18 },  // วัคซีนพิษสุนัขบ้า
+                    { wch: 18 },  // วันที่ฉีดวัคซีน
+                    { wch: 20 },  // สถานที่ฉีดวัคซีน
+                    { wch: 18 },  // วัคซีนอื่นๆ
+                    { wch: 30 },  // ลักษณะพิเศษ
+                    { wch: 15 }   // วันที่ลงทะเบียน
+                ];
+                ws['!cols'] = colWidths;
+
+                // Add worksheet to workbook
+                XLSX.utils.book_append_sheet(wb, ws, 'รายชื่อสัตว์เลี้ยง');
+
+                // Generate filename with current date
+                const now = new Date();
+                const day = now.getDate().toString().padStart(2, '0');
+                const month = (now.getMonth() + 1).toString().padStart(2, '0');
+                const year = (now.getFullYear() + 543).toString(); // Convert to Buddhist year
+                const dateStr = `${day}-${month}-${year}`;
+                const filename = `รายชื่อสัตว์เลี้ยง_${dateStr}.xlsx`;
+
+                // Save file
+                XLSX.writeFile(wb, filename);
+
+                // Show success message
+                const exportBtn = document.getElementById('exportBtn');
+                const originalText = exportBtn.innerHTML;
+                exportBtn.innerHTML = '<span class="flex items-center justify-center"><span class="mr-3 text-2xl">✅</span>ส่งออกสำเร็จ!</span>';
+                setTimeout(() => {
+                    exportBtn.innerHTML = originalText;
+                }, 3000);
+
+            } catch (error) {
+                console.error('Export error:', error);
+                alert('เกิดข้อผิดพลาดในการส่งออกไฟล์ กรุณาลองใหม่อีกครั้ง');
+            }
+        }
+
+        // Event Listeners
+        document.getElementById('petForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const petData = {
+                ownerName: document.getElementById('ownerName').value,
+                ownerPhone: document.getElementById('ownerPhone').value,
+                shopName: document.getElementById('shopName').value,
+                petName: document.getElementById('petName').value,
+                petType: document.getElementById('petType').value,
+                petBreed: document.getElementById('petBreed').value,
+                petColor: document.getElementById('petColor').value,
+                rabiesVaccine: document.getElementById('rabiesVaccine').value,
+                vaccineDate: document.getElementById('vaccineDate').value,
+                vaccineLocation: document.getElementById('vaccineLocation').value,
+                otherVaccines: document.getElementById('otherVaccines').value,
+                petDescription: document.getElementById('petDescription').value
+            };
+            
+            addPet(petData);
+            this.reset();
+            
+            // Show success message
+            const button = this.querySelector('button[type="submit"]');
+            const originalText = button.innerHTML;
+            button.innerHTML = '<span class="flex items-center justify-center"><span class="mr-2">🎉</span>ลงทะเบียนสำเร็จแล้ว!</span>';
+            button.classList.add('from-green-500', 'to-green-600');
+            setTimeout(() => {
+                button.innerHTML = originalText;
+                button.classList.remove('from-green-500', 'to-green-600');
+            }, 3000);
+        });
+
+        function showSetupModal() {
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto';
+            modal.innerHTML = `
+                <div class="bg-white rounded-3xl p-8 max-w-2xl w-full my-8 max-h-screen overflow-y-auto">
+                    <div class="flex justify-between items-center mb-6 sticky top-0 bg-white pb-4 border-b">
+                        <h2 class="text-2xl font-bold text-gray-800">⚙️ ตั้งค่า Google Sheets</h2>
+                        <button onclick="this.closest('.fixed').remove()" class="text-gray-500 hover:text-gray-700 text-2xl font-bold hover:bg-gray-100 rounded-full w-8 h-8 flex items-center justify-center">&times;</button>
+                    </div>
+                    
+                    <div class="space-y-6">
+                        <div class="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r-xl">
+                            <h3 class="font-bold text-blue-800 mb-2">📋 ขั้นตอนการตั้งค่าแบบละเอียด:</h3>
+                            <ol class="list-decimal list-inside space-y-2 text-sm text-blue-700">
+                                <li><strong>สร้าง Google Sheets:</strong> เปิด <a href="https://sheets.google.com" target="_blank" class="underline font-semibold">sheets.google.com</a> → คลิก "+" สร้างไฟล์ใหม่</li>
+                                <li><strong>ตั้งชื่อไฟล์:</strong> คลิกที่ "Untitled spreadsheet" แล้วตั้งชื่อ เช่น "ระบบลงทะเบียนหมาแมว"</li>
+                                <li><strong>คัดลอก Sheet ID:</strong> ดู URL จะเป็น docs.google.com/spreadsheets/d/<span class="bg-yellow-200 px-1 rounded">ID_ตรงนี้</span>/edit</li>
+                                <li><strong>เปิด Apps Script:</strong> เปิดแท็บใหม่ไป <a href="https://script.google.com" target="_blank" class="underline font-semibold">script.google.com</a></li>
+                                <li><strong>สร้างโปรเจกต์:</strong> คลิก "New project" → ลบโค้ดเดิมออกหมด → วางโค้ดใหม่ที่ให้ไว้</li>
+                                <li><strong>แก้ไข Sheet ID:</strong> เปลี่ยน "YOUR_SHEET_ID" เป็น ID จริงที่คัดลอกมา</li>
+                                <li><strong>Deploy:</strong> คลิก "Deploy" → "New deployment" → เลือก type เป็น "Web app"</li>
+                                <li><strong>ตั้งค่า Permission:</strong> Execute as: "Me" และ Who has access: "Anyone"</li>
+                                <li><strong>คัดลอก URL:</strong> หลัง Deploy จะได้ Web app URL → คัดลอกมาใส่ด้านล่าง</li>
+                            </ol>
+                        </div>
+                        
+                        <div class="bg-red-50 border-l-4 border-red-400 p-4 rounded-r-xl">
+                            <h3 class="font-bold text-red-800 mb-2">🚨 สาเหตุที่เชื่อมต่อล้มเหลวบ่อย:</h3>
+                            <ul class="list-disc list-inside space-y-1 text-sm text-red-700">
+                                <li>ลืมเปลี่ยน "YOUR_SHEET_ID" ในโค้ด Apps Script</li>
+                                <li>ตั้งค่า Permission ผิด (ต้องเป็น "Anyone" ไม่ใช่ "Only myself")</li>
+                                <li>ใช้ URL ผิด (ต้องเป็น Web app URL ไม่ใช่ URL ของโปรเจกต์)</li>
+                                <li>Google Sheets ไม่ได้แชร์เป็น Public หรือ Anyone with link</li>
+                                <li>ยังไม่ได้กด "Deploy" หรือกด "Deploy" แล้วแต่ไม่ได้คัดลอก URL ใหม่</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r-xl">
+                            <h3 class="font-bold text-yellow-800 mb-2">📝 Google Apps Script Code (คัดลอกโค้ดนี้):</h3>
+                            <textarea readonly class="w-full h-40 p-3 bg-gray-100 rounded-lg text-xs font-mono" onclick="this.select()">function doPost(e) {
+  try {
+    // เปลี่ยน YOUR_SHEET_ID เป็น ID ของ Google Sheets จริง
+    const sheet = SpreadsheetApp.openById('YOUR_SHEET_ID').getActiveSheet();
+    
+    // ตรวจสอบว่ามี header หรือยัง ถ้าไม่มีให้เพิ่ม
+    if (sheet.getLastRow() === 0) {
+      sheet.appendRow([
+        'รหัสสัตว์', 'ชื่อสัตว์', 'ประเภท', 'สายพันธุ์', 'สี', 
+        'ชื่อเจ้าของ', 'เบอร์โทร', 'ร้านค้า', 'วัคซีนพิษสุนัขบ้า', 
+        'วันที่ฉีดวัคซีน', 'สถานที่ฉีด', 'วัคซีนอื่นๆ', 'ลักษณะพิเศษ', 'วันที่ลงทะเบียน'
+      ]);
+    }
+    
+    const data = JSON.parse(e.postData.contents);
+    
+    if (data.action === 'add') {
+      const pet = data.data;
+      sheet.appendRow([
+        pet.id, pet.petName, pet.petType, pet.petBreed || '',
+        pet.petColor || '', pet.ownerName, pet.ownerPhone,
+        pet.shopName || '', pet.rabiesVaccine || '',
+        pet.vaccineDate || '', pet.vaccineLocation || '',
+        pet.otherVaccines || '', pet.petDescription || '',
+        pet.registeredDate
+      ]);
+    }
+    
+    return ContentService.createTextOutput(JSON.stringify({success: true, message: 'บันทึกข้อมูลสำเร็จ'}))
+      .setMimeType(ContentService.MimeType.JSON);
+      
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({success: false, error: error.toString()}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function doGet(e) {
+  return ContentService.createTextOutput(JSON.stringify({status: 'Google Apps Script is working!'}))
+    .setMimeType(ContentService.MimeType.JSON);
+}</textarea>
+                            <p class="text-xs text-yellow-700 mt-2">⚠️ <strong>สำคัญ:</strong> อย่าลืมเปลี่ยน YOUR_SHEET_ID เป็น ID ของ Google Sheets จริงในโค้ด!</p>
+                        </div>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">🔗 Google Apps Script URL:</label>
+                                <input type="url" id="scriptUrl" placeholder="https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec" 
+                                       class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-0">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">📊 Google Sheets ID:</label>
+                                <input type="text" id="sheetId" placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms" 
+                                       class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-0">
+                                <p class="text-xs text-gray-500 mt-1">หา ID จาก URL ของ Google Sheets: https://docs.google.com/spreadsheets/d/<strong>ID_ตรงนี้</strong>/edit</p>
+                            </div>
+                        </div>
+                        
+                        <div class="flex space-x-4">
+                            <button onclick="testConnection()" class="flex-1 bg-blue-500 text-white py-3 px-6 rounded-xl font-semibold hover:bg-blue-600 transition-colors">
+                                🧪 ทดสอบการเชื่อมต่อ
+                            </button>
+                            <button onclick="saveGoogleSheetsConfig()" class="flex-1 bg-green-500 text-white py-3 px-6 rounded-xl font-semibold hover:bg-green-600 transition-colors">
+                                💾 บันทึกการตั้งค่า
+                            </button>
+                        </div>
+                        
+                        <div id="setupStatus" class="text-center" style="display: none;"></div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            
+            // โหลดค่าเดิมถ้ามี
+            const savedConfig = JSON.parse(localStorage.getItem('googleSheetsConfig') || '{}');
+            if (savedConfig.scriptUrl) document.getElementById('scriptUrl').value = savedConfig.scriptUrl;
+            if (savedConfig.sheetId) document.getElementById('sheetId').value = savedConfig.sheetId;
+        }
+
+        async function testConnection() {
+            const scriptUrl = document.getElementById('scriptUrl').value.trim();
+            const sheetId = document.getElementById('sheetId').value.trim();
+            const statusDiv = document.getElementById('setupStatus');
+            
+            if (!scriptUrl || !sheetId) {
+                statusDiv.innerHTML = '<div class="bg-red-100 text-red-700 px-4 py-2 rounded-lg">❌ กรุณากรอก URL และ Sheet ID ให้ครบถ้วน</div>';
+                statusDiv.style.display = 'block';
+                return;
+            }
+            
+            // ตรวจสอบรูปแบบ URL
+            if (!scriptUrl.includes('script.google.com') || !scriptUrl.includes('/exec')) {
+                statusDiv.innerHTML = '<div class="bg-red-100 text-red-700 px-4 py-2 rounded-lg">❌ URL ไม่ถูกต้อง ต้องเป็น Web app URL ที่ลงท้ายด้วย /exec</div>';
+                statusDiv.style.display = 'block';
+                return;
+            }
+            
+            statusDiv.innerHTML = '<div class="bg-blue-100 text-blue-700 px-4 py-2 rounded-lg">🔄 กำลังทดสอบการเชื่อมต่อ...</div>';
+            statusDiv.style.display = 'block';
+            
+            try {
+                // ทดสอบด้วย GET request ก่อน
+                const getResponse = await fetch(scriptUrl + '?test=1', {
+                    method: 'GET',
+                    mode: 'cors'
+                });
+                
+                if (!getResponse.ok) {
+                    throw new Error(`GET request failed: ${getResponse.status} - ตรวจสอบว่า Deploy แล้วและตั้งค่า Permission เป็น "Anyone"`);
+                }
+                
+                // ทดสอบด้วย POST request
+                const testData = {
+                    action: 'add',
+                    data: {
+                        id: 'TEST001',
+                        petName: 'ทดสอบ',
+                        petType: 'หมา',
+                        ownerName: 'ทดสอบระบบ',
+                        ownerPhone: '000-000-0000',
+                        registeredDate: new Date().toLocaleDateString('th-TH')
+                    }
+                };
+                
+                const postResponse = await fetch(scriptUrl, {
+                    method: 'POST',
+                    mode: 'cors',
+                    headers: { 
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(testData)
+                });
+                
+                const result = await postResponse.json();
+                
+                if (postResponse.ok && result.success) {
+                    statusDiv.innerHTML = '<div class="bg-green-100 text-green-700 px-4 py-2 rounded-lg">✅ เชื่อมต่อสำเร็จ! ระบบพร้อมใช้งาน<br><small>ข้อมูลทดสอบถูกเพิ่มลงใน Google Sheets แล้ว</small></div>';
+                } else {
+                    throw new Error(result.error || `HTTP ${postResponse.status}`);
+                }
+                
+            } catch (error) {
+                let errorMessage = '❌ เชื่อมต่อล้มเหลว: ';
+                
+                if (error.message.includes('CORS')) {
+                    errorMessage += 'ปัญหา CORS - ตรวจสอบว่าตั้งค่า "Who has access" เป็น "Anyone"';
+                } else if (error.message.includes('404')) {
+                    errorMessage += 'ไม่พบ URL - ตรวจสอบว่า Deploy แล้วและใช้ Web app URL ที่ถูกต้อง';
+                } else if (error.message.includes('403')) {
+                    errorMessage += 'ไม่มีสิทธิ์เข้าถึง - ตรวจสอบการตั้งค่า Permission';
+                } else if (error.message.includes('YOUR_SHEET_ID')) {
+                    errorMessage += 'ลืมเปลี่ยน YOUR_SHEET_ID ในโค้ด Apps Script';
+                } else {
+                    errorMessage += error.message;
+                }
+                
+                statusDiv.innerHTML = `<div class="bg-red-100 text-red-700 px-4 py-2 rounded-lg">${errorMessage}</div>`;
+            }
+        }
+
+        function saveGoogleSheetsConfig() {
+            const scriptUrl = document.getElementById('scriptUrl').value;
+            const sheetId = document.getElementById('sheetId').value;
+            const statusDiv = document.getElementById('setupStatus');
+            
+            if (!scriptUrl || !sheetId) {
+                statusDiv.innerHTML = '<div class="bg-red-100 text-red-700 px-4 py-2 rounded-lg">กรุณากรอกข้อมูลให้ครบถ้วน</div>';
+                statusDiv.style.display = 'block';
+                return;
+            }
+            
+            // บันทึกการตั้งค่า
+            const config = { scriptUrl, sheetId, enabled: true };
+            localStorage.setItem('googleSheetsConfig', JSON.stringify(config));
+            
+            // อัพเดทการตั้งค่าในระบบ
+            GOOGLE_SHEETS_CONFIG.scriptUrl = scriptUrl;
+            GOOGLE_SHEETS_CONFIG.sheetId = sheetId;
+            GOOGLE_SHEETS_CONFIG.enabled = true;
+            
+            statusDiv.innerHTML = '<div class="bg-green-100 text-green-700 px-4 py-2 rounded-lg">✅ บันทึกการตั้งค่าสำเร็จ!</div>';
+            statusDiv.style.display = 'block';
+            
+            updateConnectionStatus();
+            
+            // ปิด modal หลังจาก 2 วินาที
+            setTimeout(() => {
+                document.querySelector('.fixed.inset-0').remove();
+            }, 2000);
+        }
+
+        function showFirebaseSetupModal() {
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto';
+            modal.innerHTML = `
+                <div class="bg-white rounded-3xl p-8 max-w-2xl w-full my-8 max-h-screen overflow-y-auto">
+                    <div class="flex justify-between items-center mb-6 sticky top-0 bg-white pb-4 border-b">
+                        <h2 class="text-2xl font-bold text-gray-800">🔥 ตั้งค่า Firebase</h2>
+                        <button onclick="this.closest('.fixed').remove()" class="text-gray-500 hover:text-gray-700 text-2xl font-bold hover:bg-gray-100 rounded-full w-8 h-8 flex items-center justify-center">&times;</button>
+                    </div>
+                    
+                    <div class="space-y-6">
+                        <div class="bg-orange-50 border-l-4 border-orange-400 p-4 rounded-r-xl">
+                            <h3 class="font-bold text-orange-800 mb-2">🚀 ขั้นตอนการตั้งค่า Firebase:</h3>
+                            <ol class="list-decimal list-inside space-y-2 text-sm text-orange-700">
+                                <li><strong>สร้างโปรเจกต์:</strong> เปิด <a href="https://console.firebase.google.com" target="_blank" class="underline font-semibold">Firebase Console</a> → คลิก "Create a project"</li>
+                                <li><strong>ตั้งชื่อโปรเจกต์:</strong> ใส่ชื่อโปรเจกต์ เช่น "pet-registration-system"</li>
+                                <li><strong>เปิดใช้ Firestore:</strong> ไปที่ "Firestore Database" → คลิก "Create database" → เลือก "Start in test mode"</li>
+                                <li><strong>เพิ่ม Web App:</strong> ไปที่ "Project settings" → คลิก "Add app" → เลือก Web (</>) → ตั้งชื่อ App</li>
+                                <li><strong>คัดลอก Config:</strong> หลังสร้าง App จะได้ Firebase config object → คัดลอกค่าต่างๆ มาใส่ด้านล่าง</li>
+                                <li><strong>ตั้งค่า Security Rules:</strong> ไปที่ Firestore → Rules → แก้ไขเป็น allow read, write: if true; (สำหรับทดสอบ)</li>
+                            </ol>
+                        </div>
+                        
+                        <div class="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r-xl">
+                            <h3 class="font-bold text-blue-800 mb-2">💡 ข้อดีของ Firebase:</h3>
+                            <ul class="list-disc list-inside space-y-1 text-sm text-blue-700">
+                                <li>ข้อมูลอัพเดทแบบ Real-time ทันที</li>
+                                <li>ไม่ต้องตั้งค่า Server ซับซ้อน</li>
+                                <li>มีระบบ Backup และ Security ในตัว</li>
+                                <li>สามารถเข้าถึงข้อมูลจากหลายอุปกรณ์</li>
+                                <li>ฟรีสำหรับการใช้งานระดับเล็ก</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">🔑 API Key:</label>
+                                <input type="text" id="firebaseApiKey" placeholder="AIzaSyC..." 
+                                       class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-orange-500 focus:ring-0 text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">🌐 Auth Domain:</label>
+                                <input type="text" id="firebaseAuthDomain" placeholder="project-id.firebaseapp.com" 
+                                       class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-orange-500 focus:ring-0 text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">📁 Project ID:</label>
+                                <input type="text" id="firebaseProjectId" placeholder="project-id" 
+                                       class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-orange-500 focus:ring-0 text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">🗄️ Storage Bucket:</label>
+                                <input type="text" id="firebaseStorageBucket" placeholder="project-id.appspot.com" 
+                                       class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-orange-500 focus:ring-0 text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">📨 Messaging Sender ID:</label>
+                                <input type="text" id="firebaseMessagingSenderId" placeholder="123456789" 
+                                       class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-orange-500 focus:ring-0 text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">📱 App ID:</label>
+                                <input type="text" id="firebaseAppId" placeholder="1:123:web:abc123" 
+                                       class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-orange-500 focus:ring-0 text-sm">
+                            </div>
+                        </div>
+                        
+                        <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r-xl">
+                            <h3 class="font-bold text-yellow-800 mb-2">⚠️ Security Rules สำหรับทดสอบ:</h3>
+                            <textarea readonly class="w-full h-20 p-3 bg-gray-100 rounded-lg text-xs font-mono" onclick="this.select()">rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}</textarea>
+                            <p class="text-xs text-yellow-700 mt-2">⚠️ <strong>คำเตือน:</strong> Rules นี้ใช้สำหรับทดสอบเท่านั้น ในการใช้งานจริงควรตั้งค่า Security ที่เข้มงวดกว่านี้</p>
+                        </div>
+                        
+                        <div class="flex space-x-4">
+                            <button onclick="testFirebaseConnection()" class="flex-1 bg-orange-500 text-white py-3 px-6 rounded-xl font-semibold hover:bg-orange-600 transition-colors">
+                                🧪 ทดสอบการเชื่อมต่อ
+                            </button>
+                            <button onclick="saveFirebaseConfig()" class="flex-1 bg-green-500 text-white py-3 px-6 rounded-xl font-semibold hover:bg-green-600 transition-colors">
+                                💾 บันทึกการตั้งค่า
+                            </button>
+                            <button onclick="loadFirebaseData()" class="flex-1 bg-blue-500 text-white py-3 px-6 rounded-xl font-semibold hover:bg-blue-600 transition-colors">
+                                📥 โหลดข้อมูล
+                            </button>
+                        </div>
+                        
+                        <div id="firebaseSetupStatus" class="text-center" style="display: none;"></div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            
+            // โหลดค่าเดิมถ้ามี
+            const savedConfig = JSON.parse(localStorage.getItem('firebaseConfig') || '{}');
+            if (savedConfig.apiKey) document.getElementById('firebaseApiKey').value = savedConfig.apiKey;
+            if (savedConfig.authDomain) document.getElementById('firebaseAuthDomain').value = savedConfig.authDomain;
+            if (savedConfig.projectId) document.getElementById('firebaseProjectId').value = savedConfig.projectId;
+            if (savedConfig.storageBucket) document.getElementById('firebaseStorageBucket').value = savedConfig.storageBucket;
+            if (savedConfig.messagingSenderId) document.getElementById('firebaseMessagingSenderId').value = savedConfig.messagingSenderId;
+            if (savedConfig.appId) document.getElementById('firebaseAppId').value = savedConfig.appId;
+        }
+
+        async function testFirebaseConnection() {
+            const statusDiv = document.getElementById('firebaseSetupStatus');
+            
+            const config = {
+                apiKey: document.getElementById('firebaseApiKey').value.trim(),
+                authDomain: document.getElementById('firebaseAuthDomain').value.trim(),
+                projectId: document.getElementById('firebaseProjectId').value.trim(),
+                storageBucket: document.getElementById('firebaseStorageBucket').value.trim(),
+                messagingSenderId: document.getElementById('firebaseMessagingSenderId').value.trim(),
+                appId: document.getElementById('firebaseAppId').value.trim()
+            };
+            
+            if (!config.apiKey || !config.projectId || !config.appId) {
+                statusDiv.innerHTML = '<div class="bg-red-100 text-red-700 px-4 py-2 rounded-lg">❌ กรุณากรอก API Key, Project ID และ App ID ให้ครบถ้วน</div>';
+                statusDiv.style.display = 'block';
+                return;
+            }
+            
+            statusDiv.innerHTML = '<div class="bg-blue-100 text-blue-700 px-4 py-2 rounded-lg">🔄 กำลังทดสอบการเชื่อมต่อ Firebase...</div>';
+            statusDiv.style.display = 'block';
+            
+            try {
+                // ลองเชื่อมต่อ Firebase
+                const testApp = firebase.initializeApp(config, 'test-app');
+                const testFirestore = firebase.firestore(testApp);
+                
+                // ทดสอบเขียนข้อมูล
+                await testFirestore.collection('test').doc('connection-test').set({
+                    message: 'Firebase connection test',
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                // ทดสอบอ่านข้อมูล
+                const doc = await testFirestore.collection('test').doc('connection-test').get();
+                
+                if (doc.exists) {
+                    statusDiv.innerHTML = '<div class="bg-green-100 text-green-700 px-4 py-2 rounded-lg">✅ เชื่อมต่อ Firebase สำเร็จ! ระบบพร้อมใช้งาน</div>';
+                    
+                    // ลบข้อมูลทดสอบ
+                    await testFirestore.collection('test').doc('connection-test').delete();
+                } else {
+                    throw new Error('ไม่สามารถอ่านข้อมูลได้');
+                }
+                
+                // ลบ test app
+                await testApp.delete();
+                
+            } catch (error) {
+                let errorMessage = '❌ เชื่อมต่อ Firebase ล้มเหลว: ';
+                
+                if (error.code === 'permission-denied') {
+                    errorMessage += 'ไม่มีสิทธิ์เข้าถึง - ตรวจสอบ Firestore Security Rules';
+                } else if (error.code === 'invalid-api-key') {
+                    errorMessage += 'API Key ไม่ถูกต้อง';
+                } else if (error.code === 'project-not-found') {
+                    errorMessage += 'ไม่พบ Project ID';
+                } else {
+                    errorMessage += error.message;
+                }
+                
+                statusDiv.innerHTML = `<div class="bg-red-100 text-red-700 px-4 py-2 rounded-lg">${errorMessage}</div>`;
+            }
+        }
+
+        function saveFirebaseConfig() {
+            const config = {
+                apiKey: document.getElementById('firebaseApiKey').value.trim(),
+                authDomain: document.getElementById('firebaseAuthDomain').value.trim(),
+                projectId: document.getElementById('firebaseProjectId').value.trim(),
+                storageBucket: document.getElementById('firebaseStorageBucket').value.trim(),
+                messagingSenderId: document.getElementById('firebaseMessagingSenderId').value.trim(),
+                appId: document.getElementById('firebaseAppId').value.trim(),
+                enabled: true
+            };
+            
+            const statusDiv = document.getElementById('firebaseSetupStatus');
+            
+            if (!config.apiKey || !config.projectId || !config.appId) {
+                statusDiv.innerHTML = '<div class="bg-red-100 text-red-700 px-4 py-2 rounded-lg">❌ กรุณากรอกข้อมูลให้ครบถ้วน</div>';
+                statusDiv.style.display = 'block';
+                return;
+            }
+            
+            // บันทึกการตั้งค่า
+            localStorage.setItem('firebaseConfig', JSON.stringify(config));
+            
+            // อัพเดทการตั้งค่าในระบบ
+            Object.assign(FIREBASE_CONFIG, config);
+            
+            // เริ่มต้น Firebase
+            if (initializeFirebase()) {
+                statusDiv.innerHTML = '<div class="bg-green-100 text-green-700 px-4 py-2 rounded-lg">✅ บันทึกการตั้งค่าสำเร็จ! Firebase พร้อมใช้งาน</div>';
+                updateConnectionStatus();
+                
+                // ปิด modal หลังจาก 2 วินาที
+                setTimeout(() => {
+                    document.querySelector('.fixed.inset-0').remove();
+                }, 2000);
+            } else {
+                statusDiv.innerHTML = '<div class="bg-red-100 text-red-700 px-4 py-2 rounded-lg">❌ ไม่สามารถเริ่มต้น Firebase ได้</div>';
+            }
+            
+            statusDiv.style.display = 'block';
+        }
+
+        async function loadFirebaseData() {
+            if (!FIREBASE_CONFIG.enabled) {
+                alert('กรุณาตั้งค่า Firebase ก่อน');
+                return;
+            }
+            
+            const statusDiv = document.getElementById('firebaseSetupStatus');
+            statusDiv.innerHTML = '<div class="bg-blue-100 text-blue-700 px-4 py-2 rounded-lg">🔄 กำลังโหลดข้อมูลจาก Firebase...</div>';
+            statusDiv.style.display = 'block';
+            
+            try {
+                const firebasePets = await loadFromFirebase();
+                
+                if (firebasePets.length > 0) {
+                    // ผสานข้อมูลจาก Firebase กับข้อมูลในเครื่อง
+                    const localPetIds = pets.map(pet => pet.id);
+                    const newPets = firebasePets.filter(pet => !localPetIds.includes(pet.id));
+                    
+                    pets = [...newPets, ...pets];
+                    savePets();
+                    renderPets();
+                    updateTotalCount();
+                    
+                    statusDiv.innerHTML = `<div class="bg-green-100 text-green-700 px-4 py-2 rounded-lg">✅ โหลดข้อมูลสำเร็จ! พบข้อมูลใหม่ ${newPets.length} รายการ</div>`;
+                } else {
+                    statusDiv.innerHTML = '<div class="bg-yellow-100 text-yellow-700 px-4 py-2 rounded-lg">📭 ไม่พบข้อมูลใน Firebase</div>';
+                }
+                
+            } catch (error) {
+                statusDiv.innerHTML = `<div class="bg-red-100 text-red-700 px-4 py-2 rounded-lg">❌ โหลดข้อมูลล้มเหลว: ${error.message}</div>`;
+            }
+        }
+
+        // Event Listeners
+        document.getElementById('searchInput').addEventListener('input', filterPets);
+        document.getElementById('typeFilter').addEventListener('change', filterPets);
+        document.getElementById('exportBtn').addEventListener('click', exportToExcel);
+        document.getElementById('setupBtn').addEventListener('click', showSetupModal);
+        document.getElementById('firebaseBtn').addEventListener('click', showFirebaseSetupModal);
+
+        // Initialize
+        function initializeApp() {
+            // โหลดการตั้งค่า Google Sheets
+            const savedGoogleConfig = JSON.parse(localStorage.getItem('googleSheetsConfig') || '{}');
+            if (savedGoogleConfig.enabled) {
+                GOOGLE_SHEETS_CONFIG.scriptUrl = savedGoogleConfig.scriptUrl;
+                GOOGLE_SHEETS_CONFIG.sheetId = savedGoogleConfig.sheetId;
+                GOOGLE_SHEETS_CONFIG.enabled = true;
+            }
+            
+            // โหลดการตั้งค่า Firebase
+            const savedFirebaseConfig = JSON.parse(localStorage.getItem('firebaseConfig') || '{}');
+            if (savedFirebaseConfig.enabled) {
+                Object.assign(FIREBASE_CONFIG, savedFirebaseConfig);
+                initializeFirebase();
+            }
+            
+            updateConnectionStatus();
+            renderPets();
+            updateTotalCount();
+            
+            // ลองซิงค์ข้อมูลที่ค้างอยู่
+            if (GOOGLE_SHEETS_CONFIG.enabled && isOnline) {
+                setTimeout(syncWithGoogleSheets, 1000);
+            }
+            
+            // โหลดข้อมูลจาก Firebase ถ้าเปิดใช้งาน
+            if (FIREBASE_CONFIG.enabled && isOnline) {
+                setTimeout(async () => {
+                    try {
+                        const firebasePets = await loadFromFirebase();
+                        if (firebasePets.length > 0) {
+                            const localPetIds = pets.map(pet => pet.id);
+                            const newPets = firebasePets.filter(pet => !localPetIds.includes(pet.id));
+                            
+                            if (newPets.length > 0) {
+                                pets = [...newPets, ...pets];
+                                savePets();
+                                renderPets();
+                                updateTotalCount();
+                                showSyncStatus(`โหลดข้อมูลจาก Firebase สำเร็จ! พบข้อมูลใหม่ ${newPets.length} รายการ`, 'success');
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Auto-load Firebase data failed:', error);
+                    }
+                }, 2000);
+            }
+        }
+
+        initializeApp();
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'96ef0748a03afd3c',t:'MTc1NTE1OTU3OS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
